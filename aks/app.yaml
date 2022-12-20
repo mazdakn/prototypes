@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-analysis
+  namespace: data-analysis
+  labels:
+    app: data-analysis
+    tigera.io/address-group: data-analysis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-analysis
+      tigera.io/address-group: data-analysis
+  template:
+    metadata:
+      labels:
+        app: data-analysis
+        tigera.io/address-group: data-analysis
+    spec:
+      containers:
+      - image: nicolaka/netshoot
+        command:
+          - sleep
+          - infinity
+        imagePullPolicy: IfNotPresent
+        name: data-analysis
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-analysis
+  namespace: data-analysis
+  labels:
+    service: data-analysis
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: data-analysis

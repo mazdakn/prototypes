@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: egress-gateway
+  namespace: default
+  labels:
+    egress-code: red
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      egress-code: red
+  template:
+    metadata:
+      annotations:
+        cni.projectcalico.org/ipv4pools: "[\"10.10.10.0/28\"]"
+      labels:
+        egress-code: red
+    spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: egress-gateway
+        image: quay.io/tigera/egress-gateway:v3.14.3
+        env:
+        - name: EGRESS_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/run
+          name: policysync
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - flexVolume:
+          driver: nodeagent/uds
+        name: policysync
