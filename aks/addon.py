@@ -11,12 +11,12 @@ resource_client = ResourceManagementClient(credential, SUBSCRIPTION_ID)
 compute_client = ComputeManagementClient(credential, SUBSCRIPTION_ID)
 network_client = NetworkManagementClient(credential, SUBSCRIPTION_ID)
 
-def rg_create(name, location):
+def create_rg(name, location):
     rg_result = resource_client.resource_groups.create_or_update(
         name, {"location": location})
     print(f"Provisioned resource group {rg_result.name}")
 
-def vnet_create(name, rg, location, address_space):
+def create_vnet(name, rg, location, address_space):
     poller = network_client.virtual_networks.begin_create_or_update(
         rg, name, {
             "location": location,
@@ -24,7 +24,7 @@ def vnet_create(name, rg, location, address_space):
     vnet_result = poller.result()
     print(f"Provisioned virtual network {vnet_result.name}")
 
-def subnet_create(name, rg, vnet, prefix):
+def create_subnet(name, rg, vnet, prefix):
     poller = network_client.subnets.begin_create_or_update(
     rg, vnet, name,
         {"address_prefix": prefix})
@@ -32,7 +32,7 @@ def subnet_create(name, rg, vnet, prefix):
     print(f"Provisioned virtual subnet {subnet_result.name}")
     return subnet_result.id
 
-def publicip_create(name, rg, location):
+def create_publicip(name, rg, location):
     poller = network_client.public_ip_addresses.begin_create_or_update(
     rg, name, {
         "location": location,
@@ -44,7 +44,7 @@ def publicip_create(name, rg, location):
     print(f"Provisioned public IP {ip_address_result.name} {ip_address_result.ip_address}")
     return ip_address_result.id
 
-def interface_create(name, config_name, rg, location, subnet_id, publicip_id):
+def create_interface(name, config_name, rg, location, subnet_id, publicip_id):
     poller = network_client.network_interfaces.begin_create_or_update(
         rg, name, {
             "location": location,
@@ -61,8 +61,10 @@ def interface_create(name, config_name, rg, location, subnet_id, publicip_id):
     print(f"Provisioned network interface client {nic_result.name}")
     return nic_result.id
 
-def vm_create(name, rg, location, nic_id):
+def create_vm(name, rg, location, subnet_id):
     print(f"Provisioning virtual machine {name}")
+    publicip_id = create_publicip(name+"pubip", rg, location)
+    nic_id = create_interface(name+"nic", name+"ipconfig", rg, location, subnet_id, publicip_id)
     poller = compute_client.virtual_machines.begin_create_or_update(
     rg, name, {
         "location": location,
@@ -91,14 +93,14 @@ def vm_create(name, rg, location, nic_id):
     vm_result = poller.result()
     print(f"Provisioned virtual machine {vm_result.name}")
 
-def vnet_peering_create(name, rg, vnet, target_rg, target_vnet):
+def create_vnet_peering(name, rg, vnet, target_rg, target_vnet, local_gw, remote_gw):
     remote_vnet = "/subscriptions/" + SUBSCRIPTION_ID + "/resourceGroups/" + target_rg + "/providers/Microsoft.Network/virtualNetworks/" + target_vnet + ""
     virtual_network_peering = network_client.virtual_network_peerings.begin_create_or_update(
     rg, vnet, name, {
         "allow_virtual_network_access": True,
         "allow_forwarded_traffic": True,
-        "allow_gateway_transit": False,
-        "use_remote_gateways": False,
+        "allow_gateway_transit": local_gw,
+        "use_remote_gateways": remote_gw,
         "remote_virtual_network": {
             "id": remote_vnet,
         }
@@ -112,8 +114,8 @@ def vnet_peering_create(name, rg, vnet, target_rg, target_vnet):
 
 #Microsoft.Network/virtualHubs/ipConfigurations
 def create_routeserver(name, rg, location, vnet):
-    publicip_id = publicip_create(name+"pubIP", rg, location)
-    subnet_id = subnet_create("RouteServerSubnet", rg, vnet, "10.1.1.0/24")
+    publicip_id = create_publicip(name+"pubIP", rg, location)
+    subnet_id = create_subnet("RouteServerSubnet", rg, vnet, "10.1.1.0/24")
     virtual_hub = network_client.virtual_hubs.begin_create_or_update(
     rg, name, {
         "location": location,
@@ -128,31 +130,39 @@ def create_routeserver(name, rg, location, vnet):
             }
         ],
     }).result()
+
+    ip_config = network_client.virtual_hub_ip_configuration.begin_create_or_update(
+    rg, name, name+"ipConfig", {
+        "name": name+"ipconfig", 
+        "subnet": {"id": subnet_id},
+        "public_ip_address": {"id": publicip_id},
+    }).result()
     print("Create Route Server:\n{}".format(virtual_hub))
     return virtual_hub.id
+
+def create_peer(hub, name, rg, location, ip, asn):
+    peer = network_client.virtual_hub_bgp_connection.begin_create_or_update(
+        rg, hub, name, {
+            "peer_asn": asn,
+            "peer_ip": ip,
+    }).result()
+    print("Created BGP peer:\n{}".format(peer))
 
 def main():
     RESOURCE_GROUP = "mazdak-rg"
     LOCATION = "eastus2"
     VNET_NAME = "remote-vnet"
-    AKS_RESOURCE_GROUP = "MC_mazdak-bz-rg_mazdak-bz-rg_eastus2"
-    AKS_VNET_NAME = "aks-vnet-31584722"
-    IP_NAME = "mazdak-vm-ip"
-    IP_CONFIG_NAME = "mazdak-vm-ip-config"
-    NIC_NAME = "mazdak-vm-nic"
-    VM_NAME = "mazdak-vm"
-    VNET_PEERING = "mazdak-peering1"
-    VNET_PEERING1 = "mazdak-peering2"
+    AKS_RG = "MC_mazdak-bz-rg_mazdak-bz-rg_eastus2"
+    AKS_VNET = "aks-vnet-31584722"
 
-    rg_create(RESOURCE_GROUP, LOCATION)
-    vnet_create(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
-    subnet_id = subnet_create("default", RESOURCE_GROUP, VNET_NAME, "10.1.0.0/24")
-    #publicip_id = publicip_create(IP_NAME, RESOURCE_GROUP, LOCATION)
-    #nic_id = interface_create(NIC_NAME, IP_CONFIG_NAME, RESOURCE_GROUP, LOCATION, subnet_id, publicip_id)
-    #vm_create(VM_NAME, RESOURCE_GROUP, LOCATION, nic_id)
-    #vnet_peering_create(VNET_PEERING, RESOURCE_GROUP, VNET_NAME, AKS_RESOURCE_GROUP, AKS_VNET_NAME)
+    create_rg(RESOURCE_GROUP, LOCATION)
+    create_vnet(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
+    subnet_id = create_subnet("default", RESOURCE_GROUP, VNET_NAME, "10.1.0.0/24")
+    create_vm("mazdak-vm", RESOURCE_GROUP, LOCATION, subnet_id)
     create_routeserver("mazdak-ars", RESOURCE_GROUP, LOCATION, VNET_NAME)
-
+    create_peer("mazdak-ars", "peer1", RESOURCE_GROUP, LOCATION, "10.224.0.4", 64512)
+    create_vnet_peering("aks-remote", AKS_RG, AKS_VNET, RESOURCE_GROUP, VNET_NAME, True, False)
+    create_vnet_peering("remote-aks", RESOURCE_GROUP, VNET_NAME, AKS_RG, AKS_VNET, False, True)
 
 if __name__ == "__main__":
     main()
