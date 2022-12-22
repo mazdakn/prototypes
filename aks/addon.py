@@ -111,6 +111,25 @@ def vnet_peering_create(name, rg, vnet, target_rg, target_vnet):
     print("Get virtual network peering:\n{}".format(virtual_network_peering))
 
 #Microsoft.Network/virtualHubs/ipConfigurations
+def create_routeserver(name, rg, location, vnet):
+    publicip_id = publicip_create(name+"pubIP", rg, location)
+    subnet_id = subnet_create("RouteServerSubnet", rg, vnet, "10.1.1.0/24")
+    virtual_hub = network_client.virtual_hubs.begin_create_or_update(
+    rg, name, {
+        "location": location,
+        "properties": {
+            "sku": "Standard",
+        },
+        "ip_configurations": [
+            {
+                "name": name+"ipconfig",
+                "subnet": {"id": subnet_id},
+                "public_ip_address": {"id": publicip_id},
+            }
+        ],
+    }).result()
+    print("Create Route Server:\n{}".format(virtual_hub))
+    return virtual_hub.id
 
 def main():
     RESOURCE_GROUP = "mazdak-rg"
@@ -128,10 +147,11 @@ def main():
     rg_create(RESOURCE_GROUP, LOCATION)
     vnet_create(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
     subnet_id = subnet_create("default", RESOURCE_GROUP, VNET_NAME, "10.1.0.0/24")
-    publicip_id = publicip_create(IP_NAME, RESOURCE_GROUP, LOCATION)
-    nic_id = interface_create(NIC_NAME, IP_CONFIG_NAME, RESOURCE_GROUP, LOCATION, subnet_id, publicip_id)
-    vm_create(VM_NAME, RESOURCE_GROUP, LOCATION, nic_id)
-    vnet_peering_create(VNET_PEERING, RESOURCE_GROUP, VNET_NAME, AKS_RESOURCE_GROUP, AKS_VNET_NAME)
+    #publicip_id = publicip_create(IP_NAME, RESOURCE_GROUP, LOCATION)
+    #nic_id = interface_create(NIC_NAME, IP_CONFIG_NAME, RESOURCE_GROUP, LOCATION, subnet_id, publicip_id)
+    #vm_create(VM_NAME, RESOURCE_GROUP, LOCATION, nic_id)
+    #vnet_peering_create(VNET_PEERING, RESOURCE_GROUP, VNET_NAME, AKS_RESOURCE_GROUP, AKS_VNET_NAME)
+    create_routeserver("mazdak-ars", RESOURCE_GROUP, LOCATION, VNET_NAME)
 
 
 if __name__ == "__main__":
