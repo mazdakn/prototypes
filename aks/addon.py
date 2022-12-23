@@ -115,7 +115,7 @@ def create_vnet_peering(name, rg, vnet, target_rg, target_vnet, local_gw, remote
 #Microsoft.Network/virtualHubs/ipConfigurations
 def create_routeserver(name, rg, location, vnet):
     publicip_id = create_publicip(name+"pubIP", rg, location)
-    subnet_id = create_subnet("RouteServerSubnet", rg, vnet, "10.1.1.0/24")
+    subnet_id = create_subnet("RouteServerSubnet", rg, vnet, "10.225.0.0/24")
     virtual_hub = network_client.virtual_hubs.begin_create_or_update(
     rg, name, {
         "location": location,
@@ -159,6 +159,7 @@ def main():
     create_vnet(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
     subnet_id = create_subnet("default", RESOURCE_GROUP, VNET_NAME, "10.1.0.0/24")
     create_vm("mazdak-vm", RESOURCE_GROUP, LOCATION, subnet_id)
+
     create_routeserver("mazdak-ars", AKS_RG, LOCATION, AKS_VNET)
     create_peer("mazdak-ars", "peer1", AKS_RG, LOCATION, "10.224.0.4", 64512)
     create_vnet_peering("aks-remote", AKS_RG, AKS_VNET, RESOURCE_GROUP, VNET_NAME, True, False)
