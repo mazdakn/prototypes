@@ -44,27 +44,52 @@ def create_publicip(name, rg, location):
     print(f"Provisioned public IP {ip_address_result.name} {ip_address_result.ip_address}")
     return ip_address_result.id
 
-def create_interface(name, config_name, rg, location, subnet_id, publicip_id):
+def create_interface(name, rg, location, subnet_id, publicip_id, nsg_id):
     poller = network_client.network_interfaces.begin_create_or_update(
         rg, name, {
             "location": location,
             "ip_configurations": [
                 {
-                    "name": config_name,
+                    "name": name+"ipconfig",
                     "subnet": {"id": subnet_id},
                     "public_ip_address": {"id": publicip_id},
                 }
             ],
+            "network_security_group": {
+                "id": nsg_id,
+            },
         },
     )
     nic_result = poller.result()
     print(f"Provisioned network interface client {nic_result.name}")
     return nic_result.id
 
+def create_nsg(name, rg, location):
+    nsg = network_client.network_security_groups.begin_create_or_update(
+    rg, name, {
+        "location": location,
+        "security_rules": [
+            {
+                "name": "allow-ssh",
+                "protocol": "Tcp",
+                "destination_port_range": "22",
+                "source_port_range": "*",
+                "source_address_prefix": "*",
+                "destination_address_prefix": "*",
+                "access": "Allow",
+                "direction": "Inbound",
+                "priority": 100,
+            },
+        ],
+    }).result()
+    print(f"Provisioned network security group {nsg.name}")
+    return nsg.id
+
 def create_vm(name, rg, location, subnet_id):
     print(f"Provisioning virtual machine {name}")
     publicip_id = create_publicip(name+"pubip", rg, location)
-    nic_id = create_interface(name+"nic", name+"ipconfig", rg, location, subnet_id, publicip_id)
+    nsg_id = create_nsg(name+"-nsg", rg, location)
+    nic_id = create_interface(name+"nic", rg, location, subnet_id, publicip_id, nsg_id)
     poller = compute_client.virtual_machines.begin_create_or_update(
     rg, name, {
         "location": location,
@@ -112,7 +137,6 @@ def create_vnet_peering(name, rg, vnet, target_rg, target_vnet, local_gw, remote
     rg, vnet, name)
     print("Get virtual network peering:\n{}".format(virtual_network_peering))
 
-#Microsoft.Network/virtualHubs/ipConfigurations
 def create_routeserver(name, rg, location, vnet):
     publicip_id = create_publicip(name+"pubIP", rg, location)
     subnet_id = create_subnet("RouteServerSubnet", rg, vnet, "10.225.0.0/24")
