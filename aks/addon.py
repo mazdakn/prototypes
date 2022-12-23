@@ -159,8 +159,8 @@ def main():
     create_vnet(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
     subnet_id = create_subnet("default", RESOURCE_GROUP, VNET_NAME, "10.1.0.0/24")
     create_vm("mazdak-vm", RESOURCE_GROUP, LOCATION, subnet_id)
-    create_routeserver("mazdak-ars", RESOURCE_GROUP, LOCATION, VNET_NAME)
-    create_peer("mazdak-ars", "peer1", RESOURCE_GROUP, LOCATION, "10.224.0.4", 64512)
+    create_routeserver("mazdak-ars", AKS_RG, LOCATION, AKS_VNET)
+    create_peer("mazdak-ars", "peer1", AKS_RG, LOCATION, "10.224.0.4", 64512)
     create_vnet_peering("aks-remote", AKS_RG, AKS_VNET, RESOURCE_GROUP, VNET_NAME, True, False)
     create_vnet_peering("remote-aks", RESOURCE_GROUP, VNET_NAME, AKS_RG, AKS_VNET, False, True)
 
