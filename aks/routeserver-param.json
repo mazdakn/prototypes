@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "value": "mazdak-vnet"
+        },
+        "vnetIpPrefix": {
+            "value": "10.224.0.0/12"
+        },
+        "routeServerSubnetIpPrefix": {
+            "value": "10.225.0.0/24"
+        },
+        "publicIpName": {
+            "value": "mazdak-rs-pubip" 
+        },
+        "routeServerName": {
+            "value": "mazdak-rs1"
+        }
+    }
+}
