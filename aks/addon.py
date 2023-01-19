@@ -176,8 +176,8 @@ def main():
     RESOURCE_GROUP = "mazdak-rg"
     LOCATION = "eastus2"
     VNET_NAME = "remote-vnet"
-    AKS_RG = "MC_mazdak-bz-rg_mazdak-bz-rg_eastus2"
-    AKS_VNET = "aks-vnet-31584722"
+    AKS_RG = "MC_mazdak-bz-lsl5_mazdak-bz-lsl5_eastus2"
+    AKS_VNET = "aks-vnet-14128042"
 
     create_rg(RESOURCE_GROUP, LOCATION)
     create_vnet(VNET_NAME, RESOURCE_GROUP, LOCATION, "10.1.0.0/16")
