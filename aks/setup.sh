@@ -15,7 +15,6 @@ kubectl apply -f ippool.yaml
 kubectl get secret tigera-pull-secret --namespace=calico-system -o yaml | grep -v '^[[:space:]]*namespace:[[:space:]]*calico-system' | kubectl apply --namespace=default -f -
 kubectl apply -f egw.yaml
 ===== Deploying an app ===== (documented)
-kubectl create ns data-analysis
 kubectl annotate ns data-analysis egress.projectcalico.org/selector="egress-code == 'red'"
 kubectl annotate ns data-analysis egress.projectcalico.org/namespaceSelector="projectcalico.org/name == 'default'"
 k apply -f app.yaml

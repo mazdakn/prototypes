@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: egress-gateway
-  namespace: default
+  namespace: calico-egress
   labels:
     egress-code: red
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       egress-code: red
   template:
     metadata:
       annotations:
-        cni.projectcalico.org/ipv4pools: "[\"10.10.10.0/28\"]"
+        cni.projectcalico.org/ipv4pools: '["egress-ip-red-pool"]'
       labels:
         egress-code: red
     spec:
