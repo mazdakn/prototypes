@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: calico-egress
+---
+apiVersion: operator.tigera.io/v1
+kind: EgressGateway
+metadata:
+  name: egress-gateway-red
+  namespace: calico-egress
+spec:
+  logSeverity: "Info"
+  replicas: 2
+  ipPools:
+  - name: egress-ippool-red
+  template:
+    metadata:
+      labels:
+        egress-code: red
+    spec:
+      terminationGracePeriodSeconds: 0
+      nodeSelector:
+        kubernetes.io/os: linux
